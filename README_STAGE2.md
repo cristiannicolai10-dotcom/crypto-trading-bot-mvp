@@ -154,3 +154,20 @@ V2.2:
 - keeps the `.rstrip()` Git parsing fix;
 - makes the regression test directly executable;
 - runs it safely as `python -m bot.automation.test_git_manager_porcelain`.
+
+
+## Stage 2 V2.3 — OpenAI TPM protection
+
+The previous Stage 2 used one 32K `max_output_tokens` allowance for planner,
+code-generation, and result-analysis calls. On a 60K TPM organization this
+could make a single code-generation request exceed the rate limit before it
+started.
+
+V2.3 uses separate budgets:
+- Planner: 3,000 output tokens
+- Code proposal: 16,000 output tokens
+- Result analysis: 4,000 output tokens
+
+It also reduces repository/context text sent to the model and retries temporary
+429 rate-limit errors with backoff. A truly oversized single request is not
+blindly retried; it returns a clear error instead.

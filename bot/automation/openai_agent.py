@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,9 +15,13 @@ from .safety_validator import (
 )
 from .settings import (
     BASE_DIR,
+    OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS,
     OPENAI_API_KEY,
-    OPENAI_MAX_OUTPUT_TOKENS,
+    OPENAI_CODE_MAX_OUTPUT_TOKENS,
     OPENAI_MODEL,
+    OPENAI_PLANNER_MAX_OUTPUT_TOKENS,
+    OPENAI_RATE_LIMIT_RETRIES,
+    OPENAI_RATE_LIMIT_SLEEP_SECONDS,
     OPENAI_REASONING_EFFORT,
     OPENAI_TIMEOUT_SECONDS,
     STATE_DIR,
@@ -174,6 +179,7 @@ class OpenAIResearchAgent:
         schema: dict[str, Any],
         system: str,
         user: str,
+        max_output_tokens: int,
     ) -> dict[str, Any]:
         payload: dict[str, Any] = {
             "model": OPENAI_MODEL,
@@ -195,7 +201,7 @@ class OpenAIResearchAgent:
                     "schema": schema,
                 }
             },
-            "max_output_tokens": OPENAI_MAX_OUTPUT_TOKENS,
+            "max_output_tokens": max_output_tokens,
         }
 
         if OPENAI_REASONING_EFFORT:
@@ -203,15 +209,61 @@ class OpenAIResearchAgent:
                 "effort": OPENAI_REASONING_EFFORT,
             }
 
-        response = requests.post(
-            RESPONSES_URL,
-            headers={
-                "Authorization": f"Bearer {OPENAI_API_KEY}",
-                "Content-Type": "application/json",
-            },
-            json=payload,
-            timeout=OPENAI_TIMEOUT_SECONDS,
-        )
+        response = None
+
+        for attempt in range(
+            OPENAI_RATE_LIMIT_RETRIES + 1
+        ):
+            response = requests.post(
+                RESPONSES_URL,
+                headers={
+                    "Authorization": f"Bearer {OPENAI_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+                timeout=OPENAI_TIMEOUT_SECONDS,
+            )
+
+            if response.status_code != 429:
+                break
+
+            body = response.text[:3000]
+
+            # Retrying cannot fix a single request whose declared
+            # prompt + output budget is itself above the TPM ceiling.
+            if "Request too large" in body:
+                raise RuntimeError(
+                    "OpenAI request exceeds the current TPM limit even "
+                    "before execution. Reduce prompt/context or the "
+                    "max_output_tokens budget. "
+                    f"API response: {body}"
+                )
+
+            if attempt >= OPENAI_RATE_LIMIT_RETRIES:
+                break
+
+            retry_after = response.headers.get(
+                "retry-after"
+            )
+            try:
+                wait_seconds = float(
+                    retry_after
+                ) if retry_after else (
+                    OPENAI_RATE_LIMIT_SLEEP_SECONDS
+                    * (attempt + 1)
+                )
+            except ValueError:
+                wait_seconds = (
+                    OPENAI_RATE_LIMIT_SLEEP_SECONDS
+                    * (attempt + 1)
+                )
+
+            time.sleep(wait_seconds)
+
+        if response is None:
+            raise RuntimeError(
+                "OpenAI API request was not attempted."
+            )
 
         if response.status_code >= 400:
             body = response.text[:3000]
@@ -291,7 +343,7 @@ class OpenAIResearchAgent:
                     f"{rel} ({path.stat().st_size} bytes)"
                 )
 
-        return "\n".join(sorted(rows)[:1200])
+        return "\n".join(sorted(rows)[:700])
 
     def plan(self, request_text: str) -> dict[str, Any]:
         system = """You are the planning component of an automated quantitative crypto research system.
@@ -327,6 +379,7 @@ ALLOWED REPOSITORY TREE
             schema=PLANNER_SCHEMA,
             system=system,
             user=user,
+            max_output_tokens=OPENAI_PLANNER_MAX_OUTPUT_TOKENS,
         )
 
         clean_files = []
@@ -357,13 +410,13 @@ ALLOWED REPOSITORY TREE
         self,
         files_to_read: list[str],
     ) -> str:
-        total_limit = 140_000
+        total_limit = 90_000
         used = 0
         parts = []
 
         for rel in files_to_read:
             path = BASE_DIR / rel
-            text = self._read_text(path, 45_000)
+            text = self._read_text(path, 30_000)
 
             if used + len(text) > total_limit:
                 remaining = total_limit - used
@@ -434,6 +487,7 @@ Create the smallest robust experiment that answers the request.
             schema=CODE_PROPOSAL_SCHEMA,
             system=system,
             user=user,
+            max_output_tokens=OPENAI_CODE_MAX_OUTPUT_TOKENS,
         )
 
         return validate_proposal_payload(proposal)
@@ -478,4 +532,5 @@ EXPERIMENT OUTPUT
             schema=RESULT_ANALYSIS_SCHEMA,
             system=system,
             user=user,
+            max_output_tokens=OPENAI_ANALYSIS_MAX_OUTPUT_TOKENS,
         )
