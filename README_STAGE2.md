@@ -132,3 +132,25 @@ AI proposal messages now contain:
 Pressing `VIEW DIFF` performs the same action as `/diff P-...` and displays the code diff directly in Telegram.
 
 For a proposal created before this upgrade, send `/proposal P-...`; the refreshed proposal message will include the new buttons.
+
+
+## Stage 2 V2.1 — Git porcelain path fix
+
+Fixed a bug where `run_git()` used `.strip()` on Git output. For the first
+`git status --porcelain` line this removed the leading status-column space,
+causing `research/...` to become `esearch/...` during Python compile.
+
+V2.1 preserves leading whitespace with `.rstrip()` and includes a regression
+check for the exact failure mode.
+
+
+## Stage 2 V2.2 — regression test import fix
+
+V2.1 fixed the real Git porcelain parsing bug, but its installer executed the
+regression test as a file path, so Python did not place the project root on
+`sys.path` and raised `ModuleNotFoundError: No module named 'bot'`.
+
+V2.2:
+- keeps the `.rstrip()` Git parsing fix;
+- makes the regression test directly executable;
+- runs it safely as `python -m bot.automation.test_git_manager_porcelain`.

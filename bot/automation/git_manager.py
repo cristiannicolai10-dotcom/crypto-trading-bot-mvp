@@ -29,7 +29,11 @@ def run_git(
         stderr=subprocess.STDOUT,
         check=False,
     )
-    output = process.stdout.strip()
+    # Preserve leading whitespace because `git status --porcelain`
+    # uses fixed-position XY status columns. Stripping the beginning of
+    # stdout corrupts the first changed path (e.g. "research/..." ->
+    # "esearch/...").
+    output = process.stdout.rstrip()
     if check and process.returncode != 0:
         raise GitError(
             f"git {' '.join(args)} failed ({process.returncode}):\n{output}"
