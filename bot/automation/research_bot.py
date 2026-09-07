@@ -95,6 +95,32 @@ def approval_keyboard(experiment_id: str) -> str:
     )
 
 
+def ai_proposal_keyboard(proposal_id: str) -> str:
+    return json.dumps(
+        {
+            "inline_keyboard": [
+                [
+                    {
+                        "text": "🧾 VIEW DIFF",
+                        "callback_data": f"ai_diff:{proposal_id}",
+                    }
+                ],
+                [
+                    {
+                        "text": "✅ APPROVE CODE",
+                        "callback_data": f"ai_approve:{proposal_id}",
+                    },
+                    {
+                        "text": "❌ REJECT",
+                        "callback_data": f"ai_reject:{proposal_id}",
+                    },
+                ],
+            ]
+        },
+        ensure_ascii=False,
+    )
+
+
 def tail(path: Path, lines: int = 60) -> str:
     if not path.exists():
         return "Log file not found."
@@ -173,6 +199,37 @@ class ResearchBot:
             lines.extend(["", text])
 
         return "\n".join(lines)
+
+    def _send_proposal_diff(self, pid: str) -> None:
+        proposal = self.proposals.get(pid)
+        diff_path = Path(
+            proposal.get("diff_path", "")
+        )
+
+        if not diff_path.exists():
+            self.reply(
+                f"No diff found for {pid}."
+            )
+            return
+
+        diff = diff_path.read_text(
+            encoding="utf-8",
+            errors="replace",
+        )
+
+        max_chars = 24_000
+        if len(diff) > max_chars:
+            diff = (
+                diff[:max_chars]
+                + "\n\n[Diff truncated in Telegram. "
+                "Full diff remains on server.]"
+            )
+
+        self.reply(
+            f"{pid}\n"
+            f"{proposal.get('diff_stat', '')}\n\n"
+            f"{diff}"
+        )
 
     def _queue_ai_execution(
         self,
@@ -311,8 +368,15 @@ class ResearchBot:
                 if not argument:
                     self.reply("Usage: /proposal P-...")
                     return
+
+                proposal = self.proposals.get(argument)
+                markup = None
+                if proposal.get("status") == "ready_for_approval":
+                    markup = ai_proposal_keyboard(argument)
+
                 self.reply(
-                    self._proposal_result(argument)
+                    self._proposal_result(argument),
+                    reply_markup=markup,
                 )
                 return
 
@@ -321,35 +385,7 @@ class ResearchBot:
                     self.reply("Usage: /diff P-...")
                     return
 
-                proposal = self.proposals.get(argument)
-                diff_path = Path(
-                    proposal.get("diff_path", "")
-                )
-
-                if not diff_path.exists():
-                    self.reply(
-                        f"No diff found for {argument}."
-                    )
-                    return
-
-                diff = diff_path.read_text(
-                    encoding="utf-8",
-                    errors="replace",
-                )
-
-                max_chars = 24_000
-                if len(diff) > max_chars:
-                    diff = (
-                        diff[:max_chars]
-                        + "\n\n[Diff truncated in Telegram. "
-                        "Full diff remains on server.]"
-                    )
-
-                self.reply(
-                    f"{argument}\n"
-                    f"{proposal.get('diff_stat', '')}\n\n"
-                    f"{diff}"
-                )
+                self._send_proposal_diff(argument)
                 return
 
             if command == "/promote":
@@ -547,6 +583,14 @@ class ResearchBot:
                         else "no pending proposal."
                     )
                 )
+                return
+
+            if action == "ai_diff":
+                self.tg.answer_callback_query(
+                    callback_id,
+                    "Showing code diff",
+                )
+                self._send_proposal_diff(item_id)
                 return
 
             if action == "ai_approve":

@@ -69,6 +69,12 @@ def proposal_buttons(pid: str) -> str:
             "inline_keyboard": [
                 [
                     {
+                        "text": "🧾 VIEW DIFF",
+                        "callback_data": f"ai_diff:{pid}",
+                    }
+                ],
+                [
+                    {
                         "text": "✅ APPROVE CODE",
                         "callback_data": f"ai_approve:{pid}",
                     },
@@ -76,7 +82,7 @@ def proposal_buttons(pid: str) -> str:
                         "text": "❌ REJECT",
                         "callback_data": f"ai_reject:{pid}",
                     },
-                ]
+                ],
             ]
         },
         ensure_ascii=False,

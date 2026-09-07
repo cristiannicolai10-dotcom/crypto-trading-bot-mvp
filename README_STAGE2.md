@@ -119,3 +119,16 @@ journalctl -u crypto-research-ai-worker -f
 - The default model is configurable through `OPENAI_MODEL`.
 - Result CSVs remain on the server and are not sent to Telegram.
 - A KEEP verdict is a research decision, never authorization for live trading.
+
+
+## Stage 2 V2 — VIEW DIFF button
+
+AI proposal messages now contain:
+
+- `🧾 VIEW DIFF`
+- `✅ APPROVE CODE`
+- `❌ REJECT`
+
+Pressing `VIEW DIFF` performs the same action as `/diff P-...` and displays the code diff directly in Telegram.
+
+For a proposal created before this upgrade, send `/proposal P-...`; the refreshed proposal message will include the new buttons.
