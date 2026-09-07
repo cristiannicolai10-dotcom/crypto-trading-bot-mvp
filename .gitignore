@@ -8,3 +8,11 @@ research/proposals/
 research/ai_jobs/
 research/ai_proposals/
 research/state/last_ai_result.json
+# Local runtime / research data
+data/
+reports/
+venv/
+bootstrap_files/
+
+# Installation packages
+research_automation_stage*.zip
