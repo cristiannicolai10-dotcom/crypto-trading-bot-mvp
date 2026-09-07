@@ -1,0 +1,31 @@
+{
+  "A": {
+    "status": "frozen_candidate",
+    "direction": "LONG",
+    "event_mode": "NEW_EPISODE",
+    "selector": "5m_trend_score DESC",
+    "absolute_top_n": 6,
+    "notes": "bullish expansion context"
+  },
+  "B": {
+    "status": "frozen_candidate_for_cost_test",
+    "direction": "LONG",
+    "event_mode": "NEW_EPISODE",
+    "selector": "4h_trend_score ASC",
+    "absolute_top_n": 5,
+    "notes": "broad weakness/recovery context"
+  },
+  "D": {
+    "status": "cost_validation_only",
+    "direction": "SHORT",
+    "event_mode": "NEW_EPISODE",
+    "selector": "5m_ret_1bar_pct DESC",
+    "absolute_top_n": 1,
+    "notes": "short mean-reversion after strongest last-5m spike"
+  },
+  "risk_context": {
+    "future_execution_leverage": 10,
+    "max_total_margin_fraction": 0.2,
+    "do_not_apply_to_live_trading_yet": true
+  }
+}

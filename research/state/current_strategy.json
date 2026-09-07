@@ -1,0 +1,12 @@
+{
+  "research_stage": "multi_trigger_60m_cost_validation",
+  "universe": "current_top30_usdt_linear",
+  "target_horizon_minutes": 60,
+  "execution_status": "research_only",
+  "updated_at": "2026-09-07",
+  "active_candidates": [
+    "A",
+    "B",
+    "D"
+  ]
+}

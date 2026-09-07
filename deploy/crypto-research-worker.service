@@ -1,0 +1,16 @@
+[Unit]
+Description=Crypto Research Experiment Worker
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=botadmin
+WorkingDirectory=/home/botadmin/crypto-bot
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/botadmin/crypto-bot/venv/bin/python -m bot.automation.research_worker
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,19 @@
+{
+  "experiment_id": "E-0001",
+  "title": "Frozen A/B/D 60m cost stress",
+  "enabled": true,
+  "hypothesis": "Frozen A/B/D selectors retain positive edge after realistic fees/slippage.",
+  "command": [
+    "/home/botadmin/crypto-bot/venv/bin/python",
+    "bot/backtest/build_frozen_A_B_D_signal_book.py"
+  ],
+  "timeout_seconds": 3600,
+  "requires_approval": true,
+  "output_globs": [
+    "reports/frozen_A_B_D_signal_book_*.csv",
+    "reports/frozen_A_B_D_cost_rows_*.csv",
+    "reports/frozen_A_B_D_cost_summary_*.csv",
+    "reports/frozen_A_B_D_break_even_slippage_*.csv",
+    "reports/frozen_A_B_D_overlaps_*.csv"
+  ]
+}

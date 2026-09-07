@@ -3,3 +3,8 @@ __pycache__/
 *.pyc
 logs/
 *.log
+research/jobs/
+research/proposals/
+research/ai_jobs/
+research/ai_proposals/
+research/state/last_ai_result.json
